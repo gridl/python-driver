@@ -87,7 +87,7 @@ def execute_count(expected):
     This function can be disabled by running the test harness with the env variable CQL_SKIP_EXECUTE=1 set
     """
     def _management_execute(execute_async, *args, **kwargs):
-        """This wrapper is required to exclud all management queries from the expected count"""
+        """This wrapper is required to exclude all management queries from the expected count"""
         return execute_async(*args, **kwargs).result()
 
     def innerCounter(fn):

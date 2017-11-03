@@ -20,8 +20,9 @@ from cassandra.cqlengine.management import drop_table, sync_table
 from cassandra.cqlengine.models import Model
 from cassandra.cqlengine.query import BatchQuery, DMLQuery
 from tests.integration.cqlengine.base import BaseCassEngTestCase
-from tests.integration.cqlengine import mock_execute_async
 from tests.integration.cqlengine import execute_count
+from cassandra.cluster import Session
+
 
 class TestMultiKeyModel(Model):
 
@@ -169,7 +170,6 @@ class BatchQueryTests(BaseCassEngTestCase):
                 raise Exception("Blah")
         except:
             pass
-
         obj = BatchQueryLogModel.objects(k=1)
         # should be 1 because the batch should execute
         self.assertEqual(1, len(obj))
@@ -196,14 +196,14 @@ class BatchQueryTests(BaseCassEngTestCase):
 
     @execute_count(1)
     def test_batch_execute_timeout(self):
-        with mock_execute_async(wraps=True) as mock_execute:
+        with mock.patch.object(Session, 'execute') as mock_execute:
             with BatchQuery(timeout=1) as b:
                 BatchQueryLogModel.batch(b).create(k=2, v=2)
             self.assertEqual(mock_execute.call_args[-1]['timeout'], 1)
 
     @execute_count(1)
     def test_batch_execute_no_timeout(self):
-        with mock_execute_async(wraps=True) as mock_execute:
+        with mock.patch.object(Session, 'execute') as mock_execute:
             with BatchQuery() as b:
                 BatchQueryLogModel.batch(b).create(k=2, v=2)
             self.assertEqual(mock_execute.call_args[-1]['timeout'], NOT_SET)
