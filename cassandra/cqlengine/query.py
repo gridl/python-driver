@@ -257,7 +257,6 @@ class BatchQuery(object):
                                     timeout=self._timeout, connection=self._connection)
 
         def post_processing(result):
-            check_applied(result)
             self.queries = []
             self._execute_callbacks()
 
