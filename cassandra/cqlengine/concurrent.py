@@ -27,7 +27,7 @@ class CQLEngineFuture(Future):
     _future = None
     _post_processing = None
     _result = None
-    _query_module = None
+    _check_applied_fn = None
 
     def __init__(self, future=None, post_processing=None, result=None):
         super(CQLEngineFuture, self).__init__()
@@ -51,10 +51,10 @@ class CQLEngineFuture(Future):
     @classmethod
     def _check_applied(cls, results):
         """CQLEngine post-execution LWT check"""
-        if cls._query_module is None:
-            from cassandra.cqlengine import query
-            cls._query_module = query
-        cls._query_module.check_applied(results)
+        if cls._check_applied_fn is None:
+            from cassandra.cqlengine.query import check_applied
+            cls._check_applied_fn = staticmethod(check_applied)
+        cls._check_applied_fn(results)
 
     def _execute_post_processing(self, results):
         """CQLEngine post-processing execution"""
