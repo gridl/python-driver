@@ -15,7 +15,7 @@
 from __future__ import absolute_import
 from concurrent.futures import Future
 
-__all__ = ['CQLEngineFuture']
+__all__ = ['CQLEngineFuture', 'CQLEngineFutureWaiter']
 
 
 class CQLEngineFuture(Future):

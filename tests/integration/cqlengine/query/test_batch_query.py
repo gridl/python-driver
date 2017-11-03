@@ -19,7 +19,6 @@ from cassandra.cqlengine.connection import NOT_SET
 from cassandra.cqlengine.management import drop_table, sync_table
 from cassandra.cqlengine.models import Model
 from cassandra.cqlengine.query import BatchQuery, DMLQuery
-from cassandra.cqlengine import connection
 from tests.integration.cqlengine.base import BaseCassEngTestCase
 from tests.integration.cqlengine import mock_execute_async
 from tests.integration.cqlengine import execute_count
@@ -177,7 +176,6 @@ class BatchQueryTests(BaseCassEngTestCase):
 
     @execute_count(2)
     def test_batch_execute_on_exception_skips_if_not_specified(self):
-        # makes sure if execute_on_exception == True we still apply the batch
         drop_table(BatchQueryLogModel)
         sync_table(BatchQueryLogModel)
 
@@ -198,14 +196,14 @@ class BatchQueryTests(BaseCassEngTestCase):
 
     @execute_count(1)
     def test_batch_execute_timeout(self):
-        with mock.patch.object(connection, 'execute_async', wraps=connection.execute_async) as mock_execute:
+        with mock_execute_async(wraps=True) as mock_execute:
             with BatchQuery(timeout=1) as b:
                 BatchQueryLogModel.batch(b).create(k=2, v=2)
             self.assertEqual(mock_execute.call_args[-1]['timeout'], 1)
 
     @execute_count(1)
     def test_batch_execute_no_timeout(self):
-        with mock.patch.object(connection, 'execute_async', wraps=connection.execute_async) as mock_execute:
+        with mock_execute_async(wraps=True) as mock_execute:
             with BatchQuery() as b:
                 BatchQueryLogModel.batch(b).create(k=2, v=2)
             self.assertEqual(mock_execute.call_args[-1]['timeout'], NOT_SET)

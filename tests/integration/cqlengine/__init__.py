@@ -20,13 +20,13 @@ except ImportError:
     import unittest  # noqa
 import mock
 import threading
+from functools import partial
 from concurrent.futures import Future
 
 from cassandra import ConsistencyLevel
 
-from cassandra.cqlengine.connection import execute_async
-from cassandra.cqlengine import connection, management
-from cassandra.cqlengine.management import create_keyspace_simple, drop_keyspace, CQLENG_ALLOW_SCHEMA_MANAGEMENT
+from cassandra.cqlengine import connection
+from cassandra.cqlengine.management import create_keyspace_simple, CQLENG_ALLOW_SCHEMA_MANAGEMENT
 import cassandra
 
 from tests.integration import get_server_versions, use_single_node, PROTOCOL_VERSION, CASSANDRA_IP, set_default_cass_ip
@@ -86,21 +86,17 @@ def execute_count(expected):
     then compares it to the number expected. If they don't match it throws an assertion error.
     This function can be disabled by running the test harness with the env variable CQL_SKIP_EXECUTE=1 set
     """
-    def _management_execute(*args, **kwargs):
-        """This wrapper is required to exclude all management queries from the expected count"""
+    def _management_execute(execute_async, *args, **kwargs):
+        """This wrapper is required to exclud all management queries from the expected count"""
         return execute_async(*args, **kwargs).result()
 
     def innerCounter(fn):
         def wrapped_function(*args, **kwargs):
             # Create a counter monkey patch into cassandra.cqlengine.connection.execute_async
+            original_execute_async = cassandra.cqlengine.connection.execute_async
+            management_original_function = cassandra.cqlengine.management.execute
+            cassandra.cqlengine.management.execute = partial(_management_execute, original_execute_async)
             count = StatementCounter(cassandra.cqlengine.connection.execute_async)
-            management_original_function = None
-            try:
-                management_original_function = management.execute
-                management.execute = _management_execute
-            except:
-                pass
-            original_function = cassandra.cqlengine.connection.execute_async
             # Monkey patch in our StatementCounter wrapper
             cassandra.cqlengine.connection.execute_async = count.wrapped_execute
             # Invoked the underlying unit test
@@ -108,9 +104,8 @@ def execute_count(expected):
             # Get the count from our monkey patched counter
             count.get_counter()
             # DeMonkey Patch our code
-            cassandra.cqlengine.connection.execute_async = original_function
-            if management_original_function:
-                management.execute = management_original_function
+            cassandra.cqlengine.connection.execute_async = original_execute_async
+            cassandra.cqlengine.management.execute = management_original_function
             # Check to see if we have a pre-existing test case to work from.
             if len(args) is 0:
                 test_case = unittest.TestCase("__init__")
